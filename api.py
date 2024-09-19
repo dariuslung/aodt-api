@@ -25,7 +25,7 @@ def progress_callback(current_step: int, total: int):
 
 # Upload gltf
 
-class gltfRequestModel(BaseModel):
+class gltfRequest(BaseModel):
 
     """Upload gltf data to Omniverse"""
 
@@ -39,7 +39,7 @@ class gltfRequestModel(BaseModel):
         description = "gltf file name"
     )
 
-class gltfResponseModel(BaseModel):
+class gltfResponse(BaseModel):
 
     """Return the status of gltf upload"""
 
@@ -60,19 +60,19 @@ class gltfResponseModel(BaseModel):
     summary = "Upload a gltf model",
     description = "Upload gltf 3D model.",
     tags = ['glTF'],
-    response_model = gltfResponseModel,
+    response_model = gltfResponse,
 )
 
-async def upload(request: gltfRequestModel,) -> gltfResponseModel:
+async def upload(request: gltfRequest) -> gltfResponse:
     try:
         with open("./test/gltf/" + request.file_name, "w") as gltf_file:
             json.dump(json.loads(request.input_data), gltf_file, indent = 4)
-        return gltfResponseModel(
+        return gltfResponse(
             success = True,
             error_message = None
         )
     except Exception as e:
-        return gltfResponseModel(
+        return gltfResponse(
             success = False,
             error_message = f"{e}"
         )
@@ -80,7 +80,7 @@ async def upload(request: gltfRequestModel,) -> gltfResponseModel:
 
 # Convert gltf to usd
 
-class ConvertRequestModel(BaseModel):
+class ConvertRequest(BaseModel):
 
     """Need Converted gltf file name"""
     
@@ -89,7 +89,7 @@ class ConvertRequestModel(BaseModel):
         description = "gltf file name"
     )
 
-class ConvertResponseModel(BaseModel):
+class ConvertResponse(BaseModel):
 
     """Return the status of gltf upload"""
 
@@ -116,21 +116,21 @@ class ConvertResponseModel(BaseModel):
     summary = "Convert a gltf to a usd",
     description = "Convert gltf 3D model into usd format.",
     tags = ['glTF'],
-    response_model = ConvertResponseModel,
+    response_model = ConvertResponse,
 )
 
-async def convert(request: ConvertRequestModel) -> ConvertResponseModel:
+async def convert(request: ConvertRequest) -> ConvertResponse:
     task_manager = converter.get_instance()
     file_path = "./test/usd/" + request.file_name.split('.')[0] + '.usd'
     task = task_manager.create_converter_task("./test/gltf/" + request.file_name, file_path, progress_callback)
     OK = await task.wait_until_finished()
     if not OK:
-        return ConvertResponseModel(
+        return ConvertResponse(
             success = OK,
             usd_path = None,
             error_message = task.get_error_message()
         )
-    return ConvertResponseModel(
+    return ConvertResponse(
         success =  OK,
         usd_path = file_path,
         error_message = None
@@ -147,14 +147,14 @@ async def convert(request: ConvertRequestModel) -> ConvertResponseModel:
 
 # RU Get
 
-class RUGetRequestModel(BaseModel):
+class RUGetAttrRequest(BaseModel):
 
     prim_name: str = Field(
         default = 'ru_0001',
         description = 'Primitive name'
     )
 
-class RUGetResponseModel(BaseModel):
+class RUGetAttrResponse(BaseModel):
 
     success: bool = Field(
         default = False,
@@ -175,14 +175,14 @@ class RUGetResponseModel(BaseModel):
     )
 
 @router.post(
-    path = '/ru_get',
+    path = '/ru_get_attr',
     summary = "RU get attribute",
     description = "RU get attribute",
     tags = ['RU'],
-    response_model = RUGetResponseModel
+    response_model = RUGetAttrResponse
 )
 
-async def usd_function(request: RUGetRequestModel) -> RUGetResponseModel:
+async def usd_function(request: RUGetAttrRequest) -> RUGetAttrResponse:
     usd_context = omni.usd.get_context()
     result, error_str = await usd_context.open_stage_async(STAGE_URL)
 
@@ -192,7 +192,7 @@ async def usd_function(request: RUGetRequestModel) -> RUGetResponseModel:
     path += request.prim_name
     prim = stage.GetPrimAtPath(path)
     if not prim:
-        return RUGetResponseModel(
+        return RUGetAttrResponse(
             success = False,
             error_message = 'Specified prim does not exist'
         )
@@ -207,7 +207,7 @@ async def usd_function(request: RUGetRequestModel) -> RUGetResponseModel:
     else:
         get_value = attr.Get()
     
-    return RUGetResponseModel(
+    return RUGetAttrResponse(
         success = result,
         value = str(get_value),
         error_message = error_str
@@ -216,7 +216,7 @@ async def usd_function(request: RUGetRequestModel) -> RUGetResponseModel:
 
 # RU Set
 
-class RUSetRequestModel(BaseModel):
+class RUSetAttrRequest(BaseModel):
 
     prim_name: str = Field(
         default = 'ru_0001',
@@ -238,7 +238,7 @@ class RUSetRequestModel(BaseModel):
         description = 'z'
     )
 
-class RUSetResponseModel(BaseModel):
+class RUSetAttrResponse(BaseModel):
 
     success: bool = Field(
         default = False,
@@ -259,14 +259,14 @@ class RUSetResponseModel(BaseModel):
     )
 
 @router.post(
-    path = '/ru_set',
+    path = '/ru_set_attr',
     summary = "RU set attribute",
     description = "RU set attribute",
     tags = ['RU'],
-    response_model = RUSetResponseModel
+    response_model = RUSetAttrResponse
 )
 
-async def usd_function(request: RUSetRequestModel) -> RUSetResponseModel:
+async def usd_function(request: RUSetAttrRequest) -> RUSetAttrResponse:
     usd_context = omni.usd.get_context()
     stage_url = 'omniverse://140.113.213.59/Users/aerial/plateau/8F_aodt.usd'
     result, error_str = await usd_context.open_stage_async(stage_url)
@@ -277,7 +277,7 @@ async def usd_function(request: RUSetRequestModel) -> RUSetResponseModel:
     path += request.prim_name
     prim = stage.GetPrimAtPath(path)
     if not prim:
-        return RUSetResponseModel(
+        return RUSetAttrResponse(
             success = False,
             error_message = 'Specified prim does not exist'
         )
@@ -297,7 +297,7 @@ async def usd_function(request: RUSetRequestModel) -> RUSetResponseModel:
     # Save stage
     result, error_str, path = await usd_context.save_stage_async()
     
-    return RUSetResponseModel(
+    return RUSetAttrResponse(
         success = result,
         new_value = str(new_value),
         error_message = error_str
@@ -306,14 +306,14 @@ async def usd_function(request: RUSetRequestModel) -> RUSetResponseModel:
 
 # UE Get
 
-class UEGetRequestModel(BaseModel):
+class UEGetAttrRequest(BaseModel):
 
     prim_name: str = Field(
         default = 'ue_0001',
         description = 'Primitive name'
     )
 
-class UEGetResponseModel(BaseModel):
+class UEGetAttrResponse(BaseModel):
 
     success: bool = Field(
         default = False,
@@ -334,14 +334,14 @@ class UEGetResponseModel(BaseModel):
     )
 
 @router.post(
-    path = '/ue_get',
+    path = '/ue_get_attr',
     summary = "UE get attribute",
     description = "UE get attribute",
     tags = ['UE'],
-    response_model = UEGetResponseModel
+    response_model = UEGetAttrResponse
 )
 
-async def usd_function(request: UEGetRequestModel) -> UEGetResponseModel:
+async def usd_function(request: UEGetAttrRequest) -> UEGetAttrResponse:
     usd_context = omni.usd.get_context()
     result, error_str = await usd_context.open_stage_async(STAGE_URL)
 
@@ -351,7 +351,7 @@ async def usd_function(request: UEGetRequestModel) -> UEGetResponseModel:
     path += request.prim_name
     prim = stage.GetPrimAtPath(path)
     if not prim:
-        return UEGetResponseModel(
+        return UEGetAttrResponse(
             success = False,
             error_message = 'Specified prim does not exist'
         )
@@ -366,7 +366,7 @@ async def usd_function(request: UEGetRequestModel) -> UEGetResponseModel:
     else:
         get_value = attr.Get()
     
-    return UEGetResponseModel(
+    return UEGetAttrResponse(
         success = result,
         value = str(get_value),
         error_message = error_str
@@ -375,7 +375,7 @@ async def usd_function(request: UEGetRequestModel) -> UEGetResponseModel:
 
 # RU Set
 
-class UESetRequestModel(BaseModel):
+class UESetAttrRequest(BaseModel):
 
     prim_name: str = Field(
         default = 'ue_0001',
@@ -397,7 +397,7 @@ class UESetRequestModel(BaseModel):
         description = 'z'
     )
 
-class UESetResponseModel(BaseModel):
+class UESetAttrResponse(BaseModel):
 
     success: bool = Field(
         default = False,
@@ -418,14 +418,14 @@ class UESetResponseModel(BaseModel):
     )
 
 @router.post(
-    path = '/ue_set',
+    path = '/ue_set_attr',
     summary = "UE set attribute",
     description = "UE set attribute",
-    response_model = UESetResponseModel,
+    response_model = UESetAttrResponse,
     tags = ['UE']
 )
 
-async def usd_function(request: UESetRequestModel) -> UESetResponseModel:
+async def usd_function(request: UESetAttrRequest) -> UESetAttrResponse:
     usd_context = omni.usd.get_context()
     stage_url = 'omniverse://140.113.213.59/Users/aerial/plateau/8F_aodt.usd'
     result, error_str = await usd_context.open_stage_async(stage_url)
@@ -436,7 +436,7 @@ async def usd_function(request: UESetRequestModel) -> UESetResponseModel:
     path += request.prim_name
     prim = stage.GetPrimAtPath(path)
     if not prim:
-        return UESetResponseModel(
+        return UESetAttrResponse(
             success = False,
             error_message = 'Specified prim does not exist'
         )
@@ -456,7 +456,7 @@ async def usd_function(request: UESetRequestModel) -> UESetResponseModel:
     # Save stage
     result, error_str, path = await usd_context.save_stage_async()
     
-    return UESetResponseModel(
+    return UESetAttrResponse(
         success = result,
         new_value = str(new_value),
         error_message = error_str
